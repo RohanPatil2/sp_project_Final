@@ -1,0 +1,39 @@
+# -------- directories ------------------------------------------------- SRCDIR := src INCDIR := include BINDIR := bin CGIDIR := cgi-bin CONFDIR 
+:= conf LOGDIR := logs # 2. Make sure the project root has conf/ and logs/ directories # -------- source file groups 
+----------------------------------------- CGISRC := $(SRCDIR)/GET.c $(SRCDIR)/POST.c SRCS := $(filter-out $(CGISRC),$(wildcard $(SRCDIR)/*.c)) 
+OBJS := $(SRCS:.c=.o) mkdir -p conf logs CC := gcc CFLAGS := -Wall -Wextra -g -I$(INCDIR) # (If you already have httpd.conf, leave it. Otherwise 
+create a minimal one: ifeq ($(shell uname),Darwin) echo -e "5\ncontents/\n/index.html\n8080" > conf/httpd.conf )  CFLAGS += -D_DARWIN_C_SOURCE 
+endif
+
+# -------- default target --------------------------------------------- all: prep_dirs $(BINDIR)/server cgi
+# 3. Clean and rebuild
+make clean
+make              # should now compile/link without duplicate symbol error
+
+# 4. Run the freshly built server
+bin/server 8080 contents
+
+# 5. In another terminal or a browser
+curl http://localhost:8080/links.htm
+
+# -------- server build -----------------------------------------------
+$(BINDIR)/server: $(OBJS)
+	$(CC) $(CFLAGS) $^ -o $@
+
+# -------- CGI helpers -------------------------------------------------
+cgi: $(CGIDIR)/GET.cgi $(CGIDIR)/POST.cgi
+
+$(CGIDIR)/GET.cgi: $(SRCDIR)/GET.c
+	$(CC) $(CFLAGS) $< -o $@
+
+$(CGIDIR)/POST.cgi: $(SRCDIR)/POST.c
+	$(CC) $(CFLAGS) $< -o $@
+
+# -------- housekeeping ------------------------------------------------
+clean:
+	rm -rf $(BINDIR) $(CGIDIR)/*.cgi $(SRCDIR)/*.o
+
+prep_dirs:
+	@mkdir -p $(BINDIR) $(CGIDIR) $(CONFDIR) $(LOGDIR)
+
+.PHONY: all cgi clean prep_dirs
